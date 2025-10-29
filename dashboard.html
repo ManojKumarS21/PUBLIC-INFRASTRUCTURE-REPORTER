@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Public Infrastructure Dashboard</title>
+
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <style>
+    body {
+      background-color: #f8f9fa;
+    }
+
+    .navbar {
+      background: linear-gradient(to right, #0f2027, #203a43, #2c5364);
+    }
+
+    .navbar-brand,
+    .nav-link,
+    .navbar-text {
+      color: #fff !important;
+    }
+
+    .header {
+      background: linear-gradient(to right, #c6c1cc, #1c2638);
+      color: white;
+      padding: 2rem;
+      border-radius: 0 0 1rem 1rem;
+      text-align: center;
+    }
+
+    .card {
+      border: none;
+      border-radius: 1rem;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .form-control,
+    .form-select {
+      border-radius: 0.5rem;
+    }
+
+    .btn-primary {
+      background-color: #2575fc;
+      border: none;
+      border-radius: 0.5rem;
+    }
+
+    .btn-primary:hover {
+      background-color: #1a5edb;
+    }
+
+    .upvote-btn {
+      background-color: #28a745;
+      color: white;
+      border: none;
+      border-radius: 1rem;
+      padding: 0.25rem 0.75rem;
+    }
+
+    .upvote-btn:hover {
+      background-color: #218838;
+    }
+
+    #previewImage {
+      display: none;
+      max-width: 100%;
+      margin-top: 10px;
+      border-radius: 0.5rem;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- Navbar -->
+  <nav class="navbar navbar-expand-lg">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="#"><i class="fa-solid fa-city me-2"></i>Civic Reporter</a>
+      <span class="navbar-text ms-auto">Welcome, User</span>
+    </div>
+  </nav>
+
+  <!-- Header -->
+  <div class="header">
+    <h1><i class="fa-solid fa-chart-line me-2"></i> 🗣️PUBLIC INFRASTRUCTURE REPORTER</h1>
+    <p class="lead">Report and monitor civic issues in your locality.</p>
+  </div>
+
+  <!-- Main Content -->
+  <div class="container my-4">
+    <div class="row g-4">
+      <!-- Issue Submission Form -->
+      <div class="col-md-4">
+        <div class="card p-3">
+          <h5 class="card-title"><i class="fa-solid fa-pen-to-square me-2"></i>Submit an Issue</h5>
+          <form id="issueForm" enctype="multipart/form-data">
+            <div class="mb-3">
+              <label for="issueTitle" class="form-label">Issue Title</label>
+              <input type="text" class="form-control" id="issueTitle" required>
+            </div>
+            <div class="mb-3">
+              <label for="issueDescription" class="form-label">Description</label>
+              <textarea class="form-control" id="issueDescription" rows="3" required></textarea>
+            </div>
+            <div class="mb-3">
+              <label for="issueImage" class="form-label">Upload Photo</label>
+              <input type="file" class="form-control" id="issueImage" accept="image/*">
+              <img id="previewImage" src="" alt="Preview will appear here">
+            </div>
+            <div class="mb-3">
+              <label for="issueLocation" class="form-label">Geolocation (e.g., address or lat,lon)</label>
+              <input type="text" class="form-control" id="issueLocation" required>
+            </div>
+            <button type="submit" class="btn btn-primary w-100">Report Issue</button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Map and Dashboard -->
+      <div class="col-md-8">
+        <div class="card mb-4 p-3">
+          <h5 class="card-title"><i class="fa-solid fa-map-location-dot me-2"></i>Map of Reports</h5>
+          <div id="map" style="height: 300px; border-radius: 1rem;"></div>
+
+          <div class="card p-3 mt-3">
+            <h5 class="card-title"><i class="fa-solid fa-list-check me-2"></i>Status Tracking Dashboard</h5>
+            <ul class="list-group list-group-flush">
+              <li class="list-group-item d-flex justify-content-between align-items-center">
+                🕳️ Pothole on the road
+                <button class="upvote-btn">Upvote (12)</button>
+              </li>
+              <li class="list-group-item d-flex justify-content-between align-items-center">
+                💡 Broken Streetlight
+                <button class="upvote-btn">Upvote (7)</button>
+              </li>
+              <li class="list-group-item d-flex justify-content-between align-items-center">
+                🚮 Overflowing of Sewage in the Pathway
+                <button class="upvote-btn">Upvote (18)</button>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+      document.getElementById('issueForm').addEventListener('submit', async function (event) {
+        event.preventDefault();
+
+        const formData = new FormData();
+        formData.append('title', document.getElementById('issueTitle').value);
+        formData.append('description', document.getElementById('issueDescription').value);
+        formData.append('location', document.getElementById('issueLocation').value);
+
+        const imageFile = document.getElementById('issueImage').files[0];
+        if (imageFile) {
+          formData.append('image', imageFile);
+        }
+
+        try {
+          const response = await fetch('http://localhost:3000/submit-issue', {
+            method: 'POST',
+            body: formData
+          });
+
+          if (response.ok) {
+            const data = await response.text();
+            alert('Issue submitted successfully!');
+            console.log('Server response:', data);
+            document.getElementById('issueForm').reset();
+            document.getElementById('previewImage').src = "";
+          } else {
+            throw new Error('Failed to submit issue');
+          }
+        } catch (error) {
+          console.error('Error:', error);
+          alert('Submission failed.');
+        }
+      });
+
+      document.getElementById('issueImage').addEventListener('change', function (event) {
+        const file = event.target.files[0];
+        const preview = document.getElementById('previewImage');
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = function (e) {
+            preview.src = e.target.result;
+            preview.style.display = 'block';
+          };
+          reader.readAsDataURL(file);
+        } else {
+          preview.src = "";
+          preview.style.display = 'none';
+        }
+      });
+
+      const map = L.map('map').setView([20.5937, 78.9629], 5);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 18,
+      }).addTo(map);
+      let marker;
+
+      async function geocodeLocation(location) {
+        try {
+          const parts = location.split(',');
+          if (parts.length === 2 && !isNaN(parseFloat(parts[0]))) {
+            return { lat: parseFloat(parts[0]), lon: parseFloat(parts[1]) };
+          }
+
+          const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(location)}`);
+          const data = await response.json();
+          if (data.length > 0) {
+            return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
+          } else {
+            alert("Location not found!");
+            return null;
+          }
+        } catch (err) {
+          console.error("Geocoding error:", err);
+          return null;
+        }
+      }
+
+      document.getElementById('issueLocation').addEventListener('change', async function () {
+        const location = this.value.trim();
+        const result = await geocodeLocation(location);
+        if (result) {
+          map.setView([result.lat, result.lon], 15);
+          if (marker) {
+            marker.setLatLng([result.lat, result.lon]);
+          } else {
+            marker = L.marker([result.lat, result.lon]).addTo(map);
+          }
+        }
+      });
+
+      document.querySelectorAll('.upvote-btn').forEach(btn => {
+        btn.addEventListener('click', function () {
+          let count = this.innerText.match(/\d+/);
+          if (count) {
+            let newCount = parseInt(count[0]) + 1;
+            this.innerText = `Upvote (${newCount})`;
+          }
+        });
+      });
+    </script>
+</body>
+</html>
